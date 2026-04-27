@@ -728,13 +728,12 @@ def build_carousel_endpoint():
         pptx_buf = build_carousel(data)
         topic = str(data.get('topic', 'carousel') or 'carousel').replace(' ', '_')[:40]
         filename = f'RELEASED_{topic}.pptx'
-        import base64
-        pptx_b64 = base64.b64encode(pptx_buf.read()).decode('utf-8')
-        return jsonify({
-            'filename': filename,
-            'content_type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'data': pptx_b64
-        })
+        return send_file(
+            pptx_buf,
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            as_attachment=True,
+            download_name=filename
+        )
     except Exception as e:
         return jsonify({'error': f'Build failed: {str(e)}'}), 500
 
