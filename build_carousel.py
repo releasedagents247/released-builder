@@ -41,13 +41,31 @@ TOP_INT = Inches(0.875)    # section label top -- interior slides
 # ---------------------------------------------
 # COLORS
 # ---------------------------------------------
+def sanitize_text(text):
+    """Convert smart/curly characters to ASCII-safe equivalents for PPTX XML."""
+    if not isinstance(text, str):
+        return text
+    replacements = {
+        '\u2018': "'",   # left single quotation mark
+        '\u2019': "'",   # right single quotation mark
+        '\u201c': '"',   # left double quotation mark
+        '\u201d': '"',   # right double quotation mark
+        '\u2014': ',',   # em dash -> comma (also prohibited in brand voice)
+        '\u2013': '-',   # en dash -> hyphen
+        '\u2026': '...',  # ellipsis character -> three dots
+        '\u00a0': ' ',   # non-breaking space -> regular space
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    return text
+
 def s(val):
     """Safely convert any value to string. Returns empty string for None/dict/list."""
     if val is None:
         return ''
     if isinstance(val, (dict, list)):
         return ''
-    return str(val)
+    return sanitize_text(str(val))
 
 def rgb(h):
     """Convert hex string to RGBColor."""
@@ -641,7 +659,7 @@ def run_quality_gates(data):
         violations.append('"glimpsing" found in output')
     if 'and it matters' in all_text.lower():
         violations.append('"and it matters" found in output')
-    if 'there\'s a difference' in all_text.lower():
+    if "theres a difference" in all_text.lower().replace("'", ""):
         violations.append('"there\'s a difference" found in output')
 
     hashtags = data.get('hashtags', [])
@@ -675,9 +693,6 @@ def build_carousel_endpoint():
     2. Store the returned binary as a .pptx file
     3. Attach it to the Gmail approval email
     """
-    # Accept either:
-    # 1. A proper JSON object (Content-Type: application/json)
-    # 2. A raw text string containing JSON (what Make sends from Claude's text output)
     data = None
     raw = request.get_data(as_text=True).strip()
 
