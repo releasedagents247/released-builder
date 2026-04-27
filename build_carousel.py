@@ -667,10 +667,31 @@ def build_carousel_endpoint():
     2. Store the returned binary as a .pptx file
     3. Attach it to the Gmail approval email
     """
+    # Accept either:
+    # 1. A proper JSON object (Content-Type: application/json)
+    # 2. A raw text string containing JSON (what Make sends from Claude's text output)
+    data = None
+    raw = request.get_data(as_text=True).strip()
+
+    # Try parsing as JSON directly first
     try:
-        data = request.get_json(force=True)
-    except Exception as e:
-        return jsonify({'error': f'Invalid JSON: {str(e)}'}), 400
+        data = json.loads(raw)
+    except Exception:
+        pass
+
+    # If that failed, try to extract JSON from within the text
+    # Claude sometimes wraps JSON in extra text or backticks
+    if data is None:
+        import re
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            try:
+                data = json.loads(match.group())
+            except Exception:
+                pass
+
+    if data is None:
+        return jsonify({'error': f'Could not parse JSON from request body. Raw content starts with: {raw[:200]}'}), 400
 
     # Run quality gates
     violations = run_quality_gates(data)
