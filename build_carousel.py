@@ -28,9 +28,9 @@ from lxml import etree
 
 app = Flask(__name__)
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # CANVAS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 SLIDE_W = Inches(11.25)
 SLIDE_H = Inches(14.0625)
 LM      = Inches(0.9375)   # left margin
@@ -38,9 +38,9 @@ TW      = Inches(9.375)    # text width
 TOP_S1  = Inches(2.25)     # headline top -- slide 1
 TOP_INT = Inches(0.875)    # section label top -- interior slides
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # COLORS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def s(val):
     """Safely convert any value to string. Returns empty string for None/dict/list."""
     if val is None:
@@ -88,9 +88,9 @@ GRADIENTS = {
     'forest_teal':   ['#1c4a38', '#2d7a6a'],
 }
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # GRADIENT GENERATION (PIL / numpy)
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def make_gradient_image(stops, width=1080, height=1350):
     """
     Build a vertical gradient from a list of hex color stops.
@@ -141,9 +141,9 @@ def add_solid_bg(slide, hex_color):
     sp_tree.remove(shape._element)
     sp_tree.insert(2, shape._element)
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # PHOTO HANDLING
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 PHOTOS_DIR = os.environ.get('PHOTOS_DIR', './photos')
 
 PHOTO_FILES = {
@@ -200,9 +200,9 @@ def add_photo_bg(slide, photo_key, tint_color_hex, tint_opacity=0.52):
     sp_tree.remove(pic._element)
     sp_tree.insert(2, pic._element)
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # TEXT BOX HELPERS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def add_textbox(slide, text, x, y, w, h, font_name, pt_size,
                 color_hex, italic=False, align=PP_ALIGN.LEFT, space_after=0):
     """Add a single-run text box. Returns the shape."""
@@ -265,9 +265,9 @@ def set_letter_spacing(run, spc_value=150):
     rPr = run._r.get_or_add_rPr()
     rPr.set('spc', str(spc_value))
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # BRAND ELEMENTS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def add_accent_mark(slide, color_hex):
     """
     Short horizontal rule at bottom-left.
@@ -314,9 +314,9 @@ def add_section_label(slide, label_text, accent_color_hex):
     run.font.italic = False
     set_letter_spacing(run, 150)
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # SLIDE BUILDERS
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 def build_slide_1(prs, copy, carousel_type, photo_assignment, italic_accent_color, gradient_spec):
     """
@@ -559,9 +559,9 @@ def build_slide_5(prs, copy, italic_accent_color):
     return slide
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # MAIN CAROUSEL BUILDER
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 def build_carousel(data):
     """
@@ -623,9 +623,9 @@ def build_carousel(data):
     return buf
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # QUALITY GATES
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 def run_quality_gates(data):
     """
@@ -659,9 +659,9 @@ def run_quality_gates(data):
     return violations
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # FLASK ROUTES
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 @app.route('/build-carousel', methods=['POST'])
 def build_carousel_endpoint():
@@ -711,14 +711,15 @@ def build_carousel_endpoint():
 
     try:
         pptx_buf = build_carousel(data)
-        topic = data.get('topic', 'carousel').replace(' ', '_')[:40]
+        topic = str(data.get('topic', 'carousel') or 'carousel').replace(' ', '_')[:40]
         filename = f'RELEASED_{topic}.pptx'
-        return send_file(
-            pptx_buf,
-            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            as_attachment=True,
-            download_name=filename
-        )
+        import base64
+        pptx_b64 = base64.b64encode(pptx_buf.read()).decode('utf-8')
+        return jsonify({
+            'filename': filename,
+            'content_type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'data': pptx_b64
+        })
     except Exception as e:
         return jsonify({'error': f'Build failed: {str(e)}'}), 500
 
